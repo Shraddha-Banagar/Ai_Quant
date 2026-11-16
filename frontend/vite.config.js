@@ -5,6 +5,7 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
+    allowedHosts: true,
     // Dev proxy: browser talks same-origin to Vite, Vite forwards to the
     // backend — no CORS involved during local development.
     proxy: {
