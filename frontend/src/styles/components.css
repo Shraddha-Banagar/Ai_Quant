@@ -1337,28 +1337,6 @@
   max-width: 100%;
 }
 
-.strategy-builder__header {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  padding-bottom: var(--sp-3);
-  border-bottom: 1px solid var(--border);
-}
-
-.strategy-builder__title {
-  font-family: var(--font-display);
-  font-size: var(--fs-2xl);
-  font-weight: 700;
-  letter-spacing: -0.025em;
-  color: var(--text);
-}
-
-.strategy-builder__subtitle {
-  font-size: var(--fs-md);
-  color: var(--muted);
-  max-width: 70ch;
-}
-
 .strategy-builder__form {
   display: flex;
   flex-direction: column;
@@ -2505,10 +2483,6 @@
 }
 
 @media (max-width: 640px) {
-  .strategy-builder__title {
-    font-size: var(--fs-xl);
-  }
-
   .market-grid,
   .style-grid,
   .indicators-grid {

@@ -15,7 +15,6 @@ import {
   BadgeCheck,
   ChevronDown,
   ExternalLink,
-  Flame,
   Info,
   Minus,
   Newspaper,
@@ -35,11 +34,11 @@ import {
 import {
   formatDateTime,
   formatInt,
-  formatNumber,
 } from '../lib/format.js'
 import Note from '../components/Note.jsx'
 
 const ICON_SIZE = 14
+const PAGE_SIZE = 6
 
 const REGIONS = [
   { key: 'india', label: 'India' },
@@ -164,6 +163,7 @@ export default function NewsHubPage() {
   const [sourcesStatus, setSourcesStatus] = useState(null)
   const [activeTab, setActiveTab] = useState(params.get('tab') || 'feed')
   const [credibilityOpen, setCredibilityOpen] = useState(true)
+  const [openFilter, setOpenFilter] = useState(null)
 
   const selectedRegions = parseMultiFilter(params.get('region'))
   const category = params.get('category') || ''
@@ -175,10 +175,22 @@ export default function NewsHubPage() {
   const minCredibility = params.get('min_credibility') || ''
   const hours = params.get('hours') || '168'
   const sort = params.get('sort') || 'recent'
-  const pageSize = Number(params.get('limit')) || 40
+  const filterSignature = [
+    q,
+    ticker,
+    category,
+    contentType,
+    minCredibility,
+    hours,
+    sort,
+    selectedRegions.join(','),
+    selectedSources.join(','),
+    selectedSentiments.join(','),
+  ].join('|')
 
   const mountRef = useRef(true)
   const articlesRef = useRef(null)
+  const filterCategoriesRef = useRef(null)
   const previousPageRef = useRef(currentPage)
 
   const setFilter = useCallback((key, value) => {
@@ -258,8 +270,28 @@ export default function NewsHubPage() {
   }, [load])
 
   useEffect(() => {
-    setCurrentPage((prev) => Math.min(Math.max(prev, 1), Math.max(1, Math.ceil(total / pageSize))))
-  }, [total, pageSize])
+    if (!openFilter) return undefined
+    const handlePointerDown = (event) => {
+      if (!filterCategoriesRef.current?.contains(event.target)) setOpenFilter(null)
+    }
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') setOpenFilter(null)
+    }
+    document.addEventListener('pointerdown', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [openFilter])
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [filterSignature])
+
+  useEffect(() => {
+    setCurrentPage((prev) => Math.min(Math.max(prev, 1), Math.max(1, Math.ceil(total / PAGE_SIZE))))
+  }, [total])
 
   useEffect(() => {
     if (previousPageRef.current !== currentPage) {
@@ -286,10 +318,28 @@ export default function NewsHubPage() {
     }
   }, [load])
 
-  const totalPages = Math.max(1, Math.ceil(total / pageSize))
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  const visiblePages = useMemo(() => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, index) => index + 1)
+    }
+    const pages = new Set([1, totalPages, currentPage])
+    for (let page = currentPage - 1; page <= currentPage + 1; page += 1) {
+      if (page > 1 && page < totalPages) pages.add(page)
+    }
+    const sorted = [...pages].sort((a, b) => a - b)
+    const items = []
+    let previous = 0
+    sorted.forEach((page) => {
+      if (previous && page - previous > 1) items.push(`ellipsis-${previous}`)
+      items.push(page)
+      previous = page
+    })
+    return items
+  }, [currentPage, totalPages])
   const pagedArticles = useMemo(
-    () => filteredArticles.slice((currentPage - 1) * pageSize, currentPage * pageSize),
-    [filteredArticles, currentPage, pageSize],
+    () => filteredArticles.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
+    [filteredArticles, currentPage],
   )
 
   const counts = useMemo(() => {
@@ -526,58 +576,36 @@ export default function NewsHubPage() {
   // Feed tab
   return (
     <div className="page news-hub-page">
-      <div className="page-head news-head">
-        <div className="page-head__text">
-          <h1 className="page-title">
-            <Newspaper size={20} /> Market News Hub
-            <span className="info-tip" tabIndex={0} aria-label="About sources and credibility">
-              <Info size={15} />
-              <span className="info-tip__bubble" role="tooltip">
-                Aggregated news from Indian publishers, official sources
-                (NSE/BSE/SEBI/RBI), US/Wall Street, China, Europe, Japan,
-                Reddit sentiment and more. Every article carries a credibility
-                rating — official sources are verified; everything else is
-                reported, not independently confirmed.
-              </span>
-            </span>
-          </h1>
-          <p className="news-subtitle">
-            Real-time Indian &amp; global market intelligence with source verification
-          </p>
-        </div>
-        <div className="page-head__actions news-head__actions">
-          <span className={`stale-indicator ${stale ? 'stale-indicator--stale' : 'stale-indicator--fresh'}`}>
-            <span className="stale-indicator__dot" />
-            {stale ? 'Stale — refresh to update' : 'Fresh'}
-          </span>
-          <button
-            className="btn btn--primary"
-            onClick={handleRefresh}
-            disabled={refreshing}
-          >
-            {refreshing ? (
-              <>
-                <RefreshCw size={ICON_SIZE} className="spinning" /> Refreshing…
-              </>
-            ) : (
-              <>
-                <RefreshCw size={ICON_SIZE} /> Refresh
-              </>
-            )}
-          </button>
-        </div>
-      </div>
-
       {error && <Note tone="danger" title="Unable to load news">{error}</Note>}
 
       {/* Overview strip */}
       <section className="panel overview-strip" aria-labelledby="overview">
-        <h2 className="section-title" id="overview">Overview</h2>
+        <div className="overview-strip__head">
+          <h2 className="section-title" id="overview">Overview</h2>
+          <div className="page-head__actions news-head__actions">
+            <span className={`stale-indicator ${stale ? 'stale-indicator--stale' : 'stale-indicator--fresh'}`}>
+              <span className="stale-indicator__dot" />
+              {stale ? 'Stale — refresh to update' : 'Fresh'}
+            </span>
+            <button
+              className="btn btn--primary"
+              onClick={handleRefresh}
+              disabled={refreshing}
+            >
+              {refreshing ? (
+                <>
+                  <RefreshCw size={ICON_SIZE} className="spinning" /> Refreshing…
+                </>
+              ) : (
+                <>
+                  <RefreshCw size={ICON_SIZE} /> Refresh
+                </>
+              )}
+            </button>
+          </div>
+        </div>
         <div className="overview-grid">
           <div className="overview-card overview-card--articles">
-            <span className="overview-card__icon" aria-hidden="true">
-              <Newspaper size={15} />
-            </span>
             <span className="overview-card__label">Articles</span>
             <span className="overview-card__value">{counts?.total ?? '—'}</span>
             <span className="overview-card__delta">
@@ -585,25 +613,16 @@ export default function NewsHubPage() {
             </span>
           </div>
           <div className="overview-card overview-card--impact">
-            <span className="overview-card__icon" aria-hidden="true">
-              <Flame size={15} />
-            </span>
             <span className="overview-card__label">High impact</span>
             <span className="overview-card__value">{counts?.highImpact ?? '—'}</span>
             <span className="overview-card__delta">priority signals</span>
           </div>
           <div className="overview-card overview-card--official">
-            <span className="overview-card__icon" aria-hidden="true">
-              <ShieldCheck size={15} />
-            </span>
-            <span className="overview-card__label">Official / verified</span>
+            <span className="overview-card__label">Verified</span>
             <span className="overview-card__value">{counts?.official ?? '—'}</span>
             <span className="overview-card__delta">exchange &amp; regulators</span>
           </div>
           <div className="overview-card overview-card--community">
-            <span className="overview-card__icon" aria-hidden="true">
-              <Users size={15} />
-            </span>
             <span className="overview-card__label">Community posts</span>
             <span className="overview-card__value">{counts?.community ?? '—'}</span>
             <span className="overview-card__delta">sentiment only</span>
@@ -613,12 +632,6 @@ export default function NewsHubPage() {
         <div className="overview-sentiment">
           <div className="overview-sentiment__head">
             <h3 className="overview-sentiment__title">Market Sentiment</h3>
-            {sentimentSnapshot && (
-              <span className="sentiment-sample">
-                Sample: {formatNumber(sentimentSnapshot.sample_size)} ·{' '}
-                {sentimentSnapshot.method === 'provider' ? 'provider scores' : 'lexicon scores'}
-              </span>
-            )}
           </div>
           {sentimentSnapshot && (
             <>
@@ -769,49 +782,93 @@ export default function NewsHubPage() {
           </button>
         </div>
 
-        <div className="filter-pills">
-          <div className="chip-group">
-            <span className="chip-group__label">Region</span>
-            {REGIONS.map((item) => (
-              <button
-                key={item.key}
-                className={`filter-chip ${selectedRegions.includes(item.key) ? 'filter-chip--active' : ''}`}
-                aria-pressed={selectedRegions.includes(item.key)}
-                onClick={() => toggleFilter('region', selectedRegions, item.key)}
-              >
-                {item.label}
-                {selectedRegions.includes(item.key) && <X size={11} className="filter-chip__close" aria-hidden="true" />}
-              </button>
-            ))}
+        <div className="filter-categories" ref={filterCategoriesRef}>
+          <div className="filter-category__triggers">
+            <button
+              type="button"
+              className={`filter-category__trigger ${selectedRegions.length ? 'filter-category__trigger--active' : ''} ${openFilter === 'region' ? 'filter-category__trigger--open' : ''}`}
+              aria-expanded={openFilter === 'region'}
+              aria-controls="filter-tray-region"
+              onClick={() => setOpenFilter((prev) => (prev === 'region' ? null : 'region'))}
+            >
+              <span>Region</span>
+              {selectedRegions.length > 0 && (
+                <span className="filter-category__count">{selectedRegions.length}</span>
+              )}
+              <ChevronDown size={13} className="filter-category__chevron" aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              className={`filter-category__trigger ${selectedSources.length ? 'filter-category__trigger--active' : ''} ${openFilter === 'source' ? 'filter-category__trigger--open' : ''}`}
+              aria-expanded={openFilter === 'source'}
+              aria-controls="filter-tray-source"
+              onClick={() => setOpenFilter((prev) => (prev === 'source' ? null : 'source'))}
+            >
+              <span>Source</span>
+              {selectedSources.length > 0 && (
+                <span className="filter-category__count">{selectedSources.length}</span>
+              )}
+              <ChevronDown size={13} className="filter-category__chevron" aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              className={`filter-category__trigger ${selectedSentiments.length ? 'filter-category__trigger--active' : ''} ${openFilter === 'sentiment' ? 'filter-category__trigger--open' : ''}`}
+              aria-expanded={openFilter === 'sentiment'}
+              aria-controls="filter-tray-sentiment"
+              onClick={() => setOpenFilter((prev) => (prev === 'sentiment' ? null : 'sentiment'))}
+            >
+              <span>Sentiment</span>
+              {selectedSentiments.length > 0 && (
+                <span className="filter-category__count">{selectedSentiments.length}</span>
+              )}
+              <ChevronDown size={13} className="filter-category__chevron" aria-hidden="true" />
+            </button>
           </div>
-          <div className="chip-group">
-            <span className="chip-group__label">Source</span>
-            {SOURCE_TYPES.map((item) => (
-              <button
-                key={item.key}
-                className={`filter-chip ${selectedSources.includes(item.key) ? 'filter-chip--active' : ''}`}
-                aria-pressed={selectedSources.includes(item.key)}
-                onClick={() => toggleFilter('source_type', selectedSources, item.key)}
-              >
-                {item.label}
-                {selectedSources.includes(item.key) && <X size={11} className="filter-chip__close" aria-hidden="true" />}
-              </button>
-            ))}
-          </div>
-          <div className="chip-group">
-            <span className="chip-group__label">Sentiment</span>
-            {SENTIMENTS.map((item) => (
-              <button
-                key={item.key}
-                className={`filter-chip ${selectedSentiments.includes(item.key) ? 'filter-chip--active' : ''}`}
-                aria-pressed={selectedSentiments.includes(item.key)}
-                onClick={() => toggleFilter('sentiment', selectedSentiments, item.key)}
-              >
-                {item.label}
-                {selectedSentiments.includes(item.key) && <X size={11} className="filter-chip__close" aria-hidden="true" />}
-              </button>
-            ))}
-          </div>
+          {openFilter === 'region' && (
+            <div className="filter-category__tray" id="filter-tray-region" role="group" aria-label="Region filters">
+              {REGIONS.map((item) => (
+                <button
+                  key={item.key}
+                  className={`filter-chip ${selectedRegions.includes(item.key) ? 'filter-chip--active' : ''}`}
+                  aria-pressed={selectedRegions.includes(item.key)}
+                  onClick={() => toggleFilter('region', selectedRegions, item.key)}
+                >
+                  {item.label}
+                  {selectedRegions.includes(item.key) && <X size={11} className="filter-chip__close" aria-hidden="true" />}
+                </button>
+              ))}
+            </div>
+          )}
+          {openFilter === 'source' && (
+            <div className="filter-category__tray" id="filter-tray-source" role="group" aria-label="Source filters">
+              {SOURCE_TYPES.map((item) => (
+                <button
+                  key={item.key}
+                  className={`filter-chip ${selectedSources.includes(item.key) ? 'filter-chip--active' : ''}`}
+                  aria-pressed={selectedSources.includes(item.key)}
+                  onClick={() => toggleFilter('source_type', selectedSources, item.key)}
+                >
+                  {item.label}
+                  {selectedSources.includes(item.key) && <X size={11} className="filter-chip__close" aria-hidden="true" />}
+                </button>
+              ))}
+            </div>
+          )}
+          {openFilter === 'sentiment' && (
+            <div className="filter-category__tray" id="filter-tray-sentiment" role="group" aria-label="Sentiment filters">
+              {SENTIMENTS.map((item) => (
+                <button
+                  key={item.key}
+                  className={`filter-chip ${selectedSentiments.includes(item.key) ? 'filter-chip--active' : ''}`}
+                  aria-pressed={selectedSentiments.includes(item.key)}
+                  onClick={() => toggleFilter('sentiment', selectedSentiments, item.key)}
+                >
+                  {item.label}
+                  {selectedSentiments.includes(item.key) && <X size={11} className="filter-chip__close" aria-hidden="true" />}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
@@ -921,6 +978,25 @@ export default function NewsHubPage() {
             >
               <Minus size={ICON_SIZE} /> Prev
             </button>
+            <nav className="pagination__pages" aria-label="Article pages">
+              {visiblePages.map((page) => (
+                typeof page === 'number' ? (
+                  <button
+                    key={page}
+                    type="button"
+                    className={`btn btn--sm btn--outline pagination__page ${page === currentPage ? 'pagination__page--active' : ''}`}
+                    aria-current={page === currentPage ? 'page' : undefined}
+                    onClick={() => setCurrentPage(page)}
+                  >
+                    {page}
+                  </button>
+                ) : (
+                  <span key={page} className="pagination__ellipsis" aria-hidden="true">
+                    …
+                  </span>
+                )
+              ))}
+            </nav>
             <span className="pagination__info">
               Page {currentPage} of {totalPages} · {formatInt(total)} articles
             </span>

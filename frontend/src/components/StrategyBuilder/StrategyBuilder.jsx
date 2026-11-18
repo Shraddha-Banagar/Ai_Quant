@@ -232,10 +232,6 @@ export default function StrategyBuilder() {
 
   return (
     <div className="strategy-builder-page">
-      <header className="strategy-builder__header">
-        <h1 className="strategy-builder__title">Create Your Trading Strategy</h1>
-      </header>
-
       <form className="strategy-builder__form" onSubmit={(e) => e.preventDefault()}>
         <MarketSection
           value={config.market}

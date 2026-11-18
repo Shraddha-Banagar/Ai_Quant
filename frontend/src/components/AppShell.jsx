@@ -20,6 +20,10 @@ function useStrategyCount() {
   return count
 }
 
+const TOP_BAR_TITLES = {
+  '/news': 'Market News Hub',
+}
+
 const SIDEBAR_ITEMS = [
   { label: 'Dashboard', to: '/dashboard', icon: 'grid_view', end: true },
   { label: 'Market News', to: '/news', icon: 'newspaper' },
@@ -75,7 +79,7 @@ export default function AppShell() {
   // Longest route wins so /studio/builder titles Builder, not Studio.
   const activeItem =
     activeMatches.sort((a, b) => (b.to || '').length - (a.to || '').length)[0] || {}
-  const activeLabel = activeItem.label || ''
+  const activeLabel = TOP_BAR_TITLES[pathname] || activeItem.label || ''
 
   async function handleLogout() {
     // Wipe the session (AuthContext clears this user's entire browser cache),
