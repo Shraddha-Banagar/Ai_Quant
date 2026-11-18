@@ -57,7 +57,7 @@
 .live-chart__name-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: wrap;
 }
 
@@ -104,19 +104,33 @@
 }
 
 .live-chart__meta {
-  display: flex;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
   flex-wrap: wrap;
-  gap: 4px 16px;
-  font-size: 0.7rem;
+  gap: 2px 0;
+  font-size: 0.64rem;
   line-height: 1.5;
-  color: var(--lc-muted);
+  color: #8a819c;
   text-align: right;
 }
 
+.live-chart__meta > span {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.live-chart__meta > span + span::before {
+  content: '|';
+  margin: 0 8px;
+  color: #d7cbe1;
+}
+
 .live-chart__meta strong {
-  color: #4a4360;
-  font-weight: 700;
-  margin-right: 4px;
+  color: #6f6883;
+  font-weight: 600;
+  margin-right: 3px;
 }
 
 /* ---------------------------------------------------------------- badges */
@@ -124,11 +138,11 @@
 .lc-badge {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 3px 9px;
+  gap: 4px;
+  padding: 2px 8px;
   border-radius: 999px;
   border: 1px solid transparent;
-  font-size: 0.62rem;
+  font-size: 0.58rem;
   font-weight: 900;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -170,18 +184,18 @@
 .live-chart__toolbar {
   display: flex;
   align-items: flex-end;
-  gap: 12px 18px;
+  gap: 8px 14px;
   flex-wrap: wrap;
-  padding: 10px 12px;
-  border: 1px solid var(--lc-border);
-  border-radius: 11px;
-  background: #fbfaff;
+  padding: 7px 10px;
+  border: 1px solid #eee8f2;
+  border-radius: 10px;
+  background: #fcfbfe;
 }
 
 .lc-group {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 4px;
   min-width: 0;
 }
 
@@ -204,8 +218,8 @@
 .lc-segmented {
   display: inline-flex;
   align-items: stretch;
-  border: 1px solid var(--lc-border-strong);
-  border-radius: 8px;
+  border: 1px solid var(--lc-border);
+  border-radius: 7px;
   background: #ffffff;
   overflow: hidden;
 }
@@ -215,9 +229,9 @@
   border: 0;
   border-right: 1px solid var(--lc-border);
   background: transparent;
-  padding: 5px 9px;
+  padding: 4px 9px;
   font: inherit;
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   font-weight: 700;
   color: var(--lc-muted);
   cursor: pointer;
@@ -242,17 +256,17 @@
 .lc-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
+  gap: 4px;
 }
 
 .lc-chip {
   appearance: none;
-  border: 1px solid var(--lc-border-strong);
+  border: 1px solid var(--lc-border);
   border-radius: 999px;
   background: #ffffff;
-  padding: 4px 9px;
+  padding: 3px 9px;
   font: inherit;
-  font-size: 0.66rem;
+  font-size: 0.64rem;
   font-weight: 700;
   color: var(--lc-muted);
   cursor: pointer;
@@ -262,46 +276,47 @@
 
 .lc-chip:hover {
   border-color: #b7a7c9;
+  background: #f7f4fa;
   color: var(--lc-accent);
 }
 
 .lc-chip.is-active {
-  color: #ffffff;
-  background: #6a5a9c;
-  border-color: #6a5a9c;
+  color: var(--lc-accent);
+  background: #eeecf8;
+  border-color: #9b93cf;
 }
 
 .lc-actions {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
 }
 
 .lc-icon-btn {
   appearance: none;
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--lc-border-strong);
+  border: 1px solid var(--lc-border);
   border-radius: 7px;
   background: #ffffff;
-  color: #5d5473;
+  color: #6f6883;
   cursor: pointer;
   transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
 }
 
 .lc-icon-btn:hover {
-  background: #f3eff8;
+  background: #f7f4fa;
   color: var(--lc-accent);
   border-color: #b7a7c9;
 }
 
 .lc-icon-btn.is-active {
-  color: #ffffff;
-  background: #6a5a9c;
-  border-color: #6a5a9c;
+  color: var(--lc-accent);
+  background: #eeecf8;
+  border-color: #9b93cf;
 }
 
 /* ---------------------------------------------------------------- legend */
@@ -387,6 +402,11 @@
   min-width: 0;
   border-radius: 6px;
   overflow: hidden;
+}
+
+.live-chart .lc-panel #tv-attr-logo,
+.live-chart .lc-panel a[href*="tradingview.com"] {
+  display: none !important;
 }
 
 .lc-panel--main {
@@ -545,12 +565,13 @@
   }
 
   .live-chart__meta {
+    justify-content: flex-start;
     text-align: left;
   }
 
   .live-chart__toolbar {
-    gap: 10px 12px;
-    padding: 9px;
+    gap: 8px 10px;
+    padding: 8px;
   }
 
   .lc-group--indicators {

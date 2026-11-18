@@ -319,6 +319,7 @@ export default function LiveAlgoChart({ symbol = 'NIFTY50', quote = null, market
       width: mainEl.clientWidth || 800,
       height,
       layout: {
+        attributionLogo: false,
         background: { type: 'solid', color: '#ffffff' },
         textColor: TEXT_COLOR,
         fontFamily: "'Hanken Grotesk', -apple-system, BlinkMacSystemFont, sans-serif",

@@ -7,6 +7,7 @@ import {
   BarChart2,
   Brain,
   CheckCircle2,
+  ChevronRight,
   Clock,
   ExternalLink,
   LineChart,
@@ -117,22 +118,6 @@ function dataStatusLabel(status) {
   }
 }
 
-function dataStatusTone(status) {
-  switch (status) {
-    case 'LIVE':
-      return 'live'
-    case 'DELAYED':
-    case 'PRE_OPEN':
-      return 'delayed'
-    case 'HISTORICAL':
-      return 'historical'
-    case 'STALE':
-      return 'stale'
-    default:
-      return 'unavailable'
-  }
-}
-
 function marketTone(status) {
   if (status === 'OPEN') return 'open'
   if (status === 'PRE-OPEN') return 'pre-open'
@@ -164,7 +149,6 @@ function signedPercent(value) {
 function IndexCard({ symbol, index, isSelected, onSelect }) {
   const meta = INDEX_META[symbol] ?? { name: symbol, description: 'Index' }
   const unavailable = !index || index.status === 'unavailable' || index.price == null
-  const tone = dataStatusTone(index?.data_status ?? (unavailable ? 'UNAVAILABLE' : 'HISTORICAL'))
   const isUp = Number(index?.change_pct ?? 0) >= 0
 
   return (
@@ -179,12 +163,6 @@ function IndexCard({ symbol, index, isSelected, onSelect }) {
     >
       <div className="index-card__top">
         <span className="index-card__name">{meta.name}</span>
-        <span className={`index-card__status-badge ${tone}`}>{dataStatusLabel(index?.data_status)}</span>
-      </div>
-
-      <div className="index-card__symbol-row">
-        <span className="index-card__symbol">{symbol}</span>
-        <span className="index-card__source">{index?.source || 'yfinance'}</span>
       </div>
 
       {unavailable ? (
@@ -217,7 +195,9 @@ function IndexCard({ symbol, index, isSelected, onSelect }) {
                 <CheckCircle2 size={12} /> Viewing
               </span>
             ) : (
-              <span className="index-card__hint">Click to view chart</span>
+              <span className="index-card__hint">
+                <ChevronRight size={13} />
+              </span>
             )}
           </div>
         </>
@@ -285,7 +265,7 @@ function MarketOverview({ data, loading, error, selectedIndex, onSelect, onRetry
 
       <div className="market-overview__footer">
         <span>
-          Source: Yahoo Finance via yfinance · Updated {formatIst(data?.timestamp)} IST
+          Source: Yahoo Finance (yfinance) · Updated {formatIst(data?.timestamp)} IST
         </span>
         {marketStatus?.next_open_label && marketStatus?.status !== 'OPEN' && (
           <span>Next session: {marketStatus.next_open_label}</span>
@@ -308,7 +288,6 @@ function MarketOverview({ data, loading, error, selectedIndex, onSelect, onRetry
 
 function MarketLiveView({ selectedIndex, quote, marketStatus }) {
   const meta = INDEX_META[selectedIndex] ?? { name: selectedIndex }
-  const status = quote?.data_status ?? (quote?.status === 'unavailable' ? 'UNAVAILABLE' : null)
 
   return (
     <section className="panel dashboard-section" aria-labelledby="market-live">
@@ -320,12 +299,6 @@ function MarketLiveView({ selectedIndex, quote, marketStatus }) {
           <p className="section-subtitle">
             {meta.name} candles · EMA 9/21/50/200 · Volume · RSI · MACD
           </p>
-        </div>
-        <div className="market-live__meta">
-          <span className={`lc-badge lc-badge--${dataStatusTone(status)}`}>
-            {dataStatusLabel(status)}
-          </span>
-          <span className="disclaimer-text">{selectedIndex}</span>
         </div>
       </div>
 

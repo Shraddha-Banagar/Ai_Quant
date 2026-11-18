@@ -3409,15 +3409,25 @@ kbd {
 .market-overview__footer {
   display: flex;
   align-items: center;
-  gap: 8px 18px;
+  gap: 6px 14px;
   flex-wrap: wrap;
-  padding-top: 2px;
-  font-size: 0.68rem;
-  color: var(--faint);
+  padding-top: 8px;
+  font-size: 0.62rem;
+  color: #8a819c;
 }
 
 .market-overview__footer .btn {
   margin-left: auto;
+  border-color: transparent;
+  background: transparent;
+  color: #8a819c;
+  font-size: 0.62rem;
+}
+
+.market-overview__footer .btn:hover {
+  border-color: var(--border);
+  background: var(--surface-container);
+  color: var(--primary);
 }
 
 .market-live__meta {
@@ -3430,12 +3440,20 @@ kbd {
 /* ------------------------------------------------------------- index cards */
 
 .index-card {
-  gap: 4px;
+  gap: 10px;
   min-width: 0;
+  padding: 18px 18px 14px;
 }
 
 .index-card--error {
   opacity: 0.92;
+}
+
+.index-card--selected,
+.index-card--selected:hover:not(:disabled) {
+  border-color: var(--primary);
+  box-shadow: inset 0 0 0 0.5px rgba(64, 61, 136, 0.55), 0 6px 18px rgba(64, 61, 136, 0.1);
+  background: linear-gradient(180deg, rgba(64, 61, 136, 0.045) 0%, #ffffff 100%);
 }
 
 .index-card--skeleton {
@@ -3501,8 +3519,21 @@ kbd {
 }
 
 .index-card__change {
-  font-size: 0.78rem;
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 999px;
   font-variant-numeric: tabular-nums;
+}
+
+.index-card__change.is-up {
+  color: var(--positive);
+  background: var(--positive-soft);
+}
+
+.index-card__change.is-down {
+  color: var(--negative);
+  background: var(--negative-soft);
 }
 
 .index-card__pct {
@@ -3529,9 +3560,10 @@ kbd {
   justify-content: space-between;
   gap: 6px;
   flex-wrap: wrap;
-  margin-top: 4px;
-  font-size: 0.64rem;
-  color: var(--faint);
+  margin-top: auto;
+  padding-top: 2px;
+  font-size: 0.62rem;
+  color: #8a819c;
 }
 
 .index-card__footer > span {
@@ -3546,7 +3578,17 @@ kbd {
 }
 
 .index-card__hint {
-  color: var(--faint);
+  display: inline-flex;
+  align-items: center;
+  color: #8a819c;
+  opacity: 0.65;
+  transition: color 120ms ease, opacity 120ms ease, transform 120ms ease;
+}
+
+.index-card:hover:not(:disabled) .index-card__hint {
+  color: var(--primary);
+  opacity: 1;
+  transform: translateX(2px);
 }
 
 .index-card__error-note {

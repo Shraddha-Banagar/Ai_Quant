@@ -428,30 +428,45 @@
 .authx__control {
   border-radius: var(--r-pill);
   border: 1px solid #8b639b;
-  background: rgba(40, 37, 84, 0.65);
+  background: rgba(25, 23, 56, 0.78);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
   transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease),
     background var(--dur-fast) var(--ease);
 }
 
+.authx__input:hover,
+.authx__control:hover {
+  border-color: #af719d;
+  background: rgba(35, 32, 78, 0.86);
+}
+
+.authx__input:active,
+.authx__control:active {
+  background: #23204e;
+}
+
 .authx__input {
   width: 100%;
   padding: 10px 18px;
-  color: #ffffff;
+  color: #f3eef8;
+  caret-color: #f8b2b2;
   font-family: var(--font-sans);
   font-size: var(--fs-base);
 }
 
-.authx__input::placeholder {
+.authx__input::placeholder,
+.authx__control-input::placeholder {
   color: #b9b3d6;
+  opacity: 1;
 }
 
-.authx__input:focus {
+.authx__input:focus,
+.authx__control:focus-within {
   outline: none;
-  border-color: #f8b2b2;
-  background: rgba(50, 46, 99, 0.75);
-  box-shadow: 0 0 0 3px rgba(248, 178, 178, 0.25);
+  border-color: #af719d;
+  background: rgba(35, 32, 78, 0.92);
+  box-shadow: 0 0 0 3px rgba(175, 113, 157, 0.28);
 }
 
 .authx__control {
@@ -461,29 +476,44 @@
   padding: 0 8px 0 18px;
 }
 
-.authx__control:focus-within {
-  border-color: #f8b2b2;
-  background: rgba(50, 46, 99, 0.75);
-  box-shadow: 0 0 0 3px rgba(248, 178, 178, 0.25);
-}
-
 .authx__control-input {
   flex: 1;
   min-width: 0;
   padding: 10px 0;
   border: 0;
   background: transparent;
-  color: #ffffff;
+  color: #f3eef8;
+  caret-color: #f8b2b2;
   font-family: var(--font-sans);
   font-size: var(--fs-base);
 }
 
-.authx__control-input::placeholder {
-  color: #b9b3d6;
-}
-
 .authx__control-input:focus {
   outline: none;
+}
+
+.authx__input:-webkit-autofill,
+.authx__input:-webkit-autofill:hover,
+.authx__input:-webkit-autofill:active,
+.authx__control-input:-webkit-autofill,
+.authx__control-input:-webkit-autofill:hover,
+.authx__control-input:-webkit-autofill:active,
+.authx__input:autofill,
+.authx__control-input:autofill {
+  -webkit-box-shadow: 0 0 0 1000px rgba(25, 23, 56, 0.94) inset !important;
+  box-shadow: 0 0 0 1000px rgba(25, 23, 56, 0.94) inset !important;
+  -webkit-text-fill-color: #f3eef8 !important;
+  color: #f3eef8 !important;
+  caret-color: #f8b2b2 !important;
+  transition: background-color 9999s ease-out 0s;
+}
+
+.authx__input:-webkit-autofill:focus,
+.authx__control-input:-webkit-autofill:focus,
+.authx__input:autofill:focus,
+.authx__control-input:autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px rgba(25, 23, 56, 0.94) inset, 0 0 0 3px rgba(175, 113, 157, 0.28) !important;
+  box-shadow: 0 0 0 1000px rgba(25, 23, 56, 0.94) inset, 0 0 0 3px rgba(175, 113, 157, 0.28) !important;
 }
 
 .authx__peek {
