@@ -79,9 +79,9 @@ export default function AppShell() {
 
   async function handleLogout() {
     // Wipe the session (AuthContext clears this user's entire browser cache),
-    // then hard-navigate home so no in-memory dashboard state survives.
+    // then hard-navigate to login so no in-memory dashboard state survives.
     await logout()
-    window.location.href = '/'
+    window.location.href = '/login'
   }
 
   return (

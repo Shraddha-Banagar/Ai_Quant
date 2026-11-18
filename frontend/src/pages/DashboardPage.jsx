@@ -19,6 +19,7 @@ import {
   Target,
   TrendingDown,
   TrendingUp,
+  X,
 } from 'lucide-react'
 import {
   fetchAIBriefing,
@@ -640,11 +641,30 @@ function SectorChip({ item }) {
   )
 }
 
-function AIMarketBriefing() {
+function sectorPhrase(items) {
+  const list = items ?? []
+  if (!list.length) return 'None reported'
+  return list
+    .map((item) => {
+      if (typeof item === 'string') return item
+      return `${item?.sector ?? 'Unnamed sector'} (${signedPercent(item?.change_pct)})`
+    })
+    .join(', ')
+}
+
+function volatilityPhrase(briefing, vixMatch) {
+  const text = briefing?.volatility_analysis || 'Volatility analysis was not returned.'
+  if (!vixMatch) return text
+  return `${text} India VIX is at ${vixMatch[1]} (${vixMatch[2]}%).`
+}
+
+function AIMarketBriefing({ indices = [] }) {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [activeMode, setActiveMode] = useState('concise')
+  const [lastUpdated, setLastUpdated] = useState(null)
+  const [drawer, setDrawer] = useState(null)
 
   const generate = useCallback(async (mode = 'concise', { force = false } = {}) => {
     setLoading(true)
@@ -653,6 +673,7 @@ function AIMarketBriefing() {
     try {
       const result = await fetchAIBriefing({ mode, force })
       setData(result)
+      setLastUpdated(new Date().toISOString())
     } catch (err) {
       setError(err.message || 'The AI briefing could not be generated.')
     } finally {
@@ -664,6 +685,15 @@ function AIMarketBriefing() {
     generate('concise')
   }, [generate])
 
+  useEffect(() => {
+    if (!drawer) return undefined
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') setDrawer(null)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [drawer])
+
   const briefing =
     data?.briefing && typeof data.briefing === 'object' ? data.briefing : null
   const legacyText = typeof data?.briefing === 'string' ? data.briefing : null
@@ -672,6 +702,10 @@ function AIMarketBriefing() {
     typeof briefing?.volatility_analysis === 'string'
       ? briefing.volatility_analysis.match(/INDIA VIX is at\s+([\d,.]+)\s*\(([-+]?[\d.]+)%\)/i)
       : null
+  const strongSectors = sectorPhrase(briefing?.sector_analysis?.strong)
+  const weakSectors = sectorPhrase(briefing?.sector_analysis?.weak)
+  const unusualSectors = sectorPhrase(briefing?.sector_analysis?.unusual)
+  const volatilityText = volatilityPhrase(briefing, vixMatch)
 
   return (
     <section className="panel dashboard-section ai-briefing-panel" aria-labelledby="ai-briefing">
@@ -693,38 +727,27 @@ function AIMarketBriefing() {
             className="btn btn--sm btn--ghost"
             onClick={() => generate(activeMode, { force: true })}
             disabled={loading}
+            aria-busy={loading}
           >
-            {loading && activeMode === 'concise' ? (
-              <Loader2 size={14} className="spinner" />
-            ) : (
-              <RefreshCw size={14} />
-            )}
+            {loading ? <Loader2 size={14} className="spinning" /> : <RefreshCw size={14} />}
             Refresh Analysis
           </button>
           <button
             type="button"
             className="btn btn--sm btn--outline"
-            onClick={() => generate('explain')}
+            onClick={() => setDrawer('explain')}
             disabled={loading}
           >
-            {loading && activeMode === 'explain' ? (
-              <Loader2 size={14} className="spinner" />
-            ) : (
-              <Sparkles size={14} />
-            )}
+            <Sparkles size={14} />
             Explain Market Movement
           </button>
           <button
             type="button"
             className="btn btn--sm btn--outline"
-            onClick={() => generate('detailed')}
+            onClick={() => setDrawer('details')}
             disabled={loading}
           >
-            {loading && activeMode === 'detailed' ? (
-              <Loader2 size={14} className="spinner" />
-            ) : (
-              <LineChart size={14} />
-            )}
+            <LineChart size={14} />
             View Detailed Analysis
           </button>
         </div>
@@ -865,9 +888,274 @@ function AIMarketBriefing() {
             <span>
               Facts as of {formatIstIso(data.timestamp_ist ?? data.timestamp)} IST
             </span>
+            {lastUpdated && (
+              <span>
+                <Clock size={12} /> Last updated {formatIstIso(lastUpdated)} IST
+              </span>
+            )}
+            {loading && <span className="ai-muted">Refreshing…</span>}
             {data.market_status?.status && <span>Market: {data.market_status.status}</span>}
             {data.disclaimer && <span className="ai-brief__disclaimer">{data.disclaimer}</span>}
           </div>
+        </div>
+      )}
+
+      {drawer && (
+        <div
+          className="ai-brief__drawer-backdrop"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 1000,
+            display: 'flex',
+            justifyContent: 'flex-end',
+            background: 'rgba(64, 61, 136, 0.32)',
+          }}
+          onMouseDown={() => setDrawer(null)}
+          role="presentation"
+        >
+          <aside
+            className="panel ai-brief__drawer"
+            style={{
+              width: 'min(560px, 100%)',
+              height: '100%',
+              overflowY: 'auto',
+              padding: 'var(--sp-5)',
+              borderRadius: '12px 0 0 12px',
+              boxShadow: 'var(--shadow-3)',
+            }}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="ai-brief-drawer-title"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className="panel__head">
+              <div>
+                <h2 className="section-title" id="ai-brief-drawer-title">
+                  {drawer === 'explain' ? 'Market Movement Explained' : 'Detailed Market Analysis'}
+                </h2>
+                <p className="section-subtitle">
+                  {drawer === 'explain'
+                    ? 'Plain-language breakdown of the current briefing'
+                    : 'Loaded index, sector, volatility and risk data'}
+                </p>
+              </div>
+              <button type="button" className="btn btn--sm btn--ghost" onClick={() => setDrawer(null)} autoFocus>
+                <X size={14} /> Close
+              </button>
+            </div>
+
+            {!data ? (
+              <Note tone="info" title="No briefing data">
+                <span>Refresh the briefing to load market context first.</span>
+              </Note>
+            ) : drawer === 'explain' ? (
+              <div className="ai-brief">
+                <div className="ai-block">
+                  <h3 className="ai-block__title">
+                    <Target size={14} /> Market direction
+                  </h3>
+                  <ul className="ai-list">
+                    <li>
+                      {briefing?.market_direction ?? legacyText ?? 'No market direction was returned.'}
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="ai-block">
+                  <h3 className="ai-block__title">
+                    <PieChart size={14} /> Sector analysis
+                  </h3>
+                  <ul className="ai-list">
+                    <li>Strong: {strongSectors}</li>
+                    <li>Weak: {weakSectors}</li>
+                    {briefing?.sector_analysis?.unusual?.length > 0 && (
+                      <li>Unusual activity: {unusualSectors}</li>
+                    )}
+                  </ul>
+                </div>
+
+                <div className="ai-block">
+                  <h3 className="ai-block__title">
+                    <Activity size={14} /> Volatility analysis
+                  </h3>
+                  <ul className="ai-list">
+                    <li>{volatilityText}</li>
+                    {briefing?.volatility_level && (
+                      <li>
+                        India VIX is in a {String(briefing.volatility_level).toLowerCase()} regime
+                        {vixMatch ? ` at ${vixMatch[1]} (${vixMatch[2]}%)` : ''}.
+                      </li>
+                    )}
+                  </ul>
+                </div>
+
+                <div className="ai-block">
+                  <h3 className="ai-block__title">
+                    <CheckCircle2 size={14} /> Important observations
+                  </h3>
+                  {briefing?.observations?.length ? (
+                    <ul className="ai-list">
+                      {briefing.observations.map((item, index) => (
+                        <li key={`explain-observation-${index}`}>{item}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="ai-muted">No observations were returned.</p>
+                  )}
+                </div>
+
+                <div className="ai-block ai-block--risk">
+                  <h3 className="ai-block__title">
+                    <ShieldAlert size={14} /> Risk alerts
+                  </h3>
+                  {briefing?.risk_alerts?.length ? (
+                    <ul className="ai-list ai-list--risk">
+                      {briefing.risk_alerts.map((item, index) => (
+                        <li key={`explain-risk-${index}`}>{item}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="ai-muted">
+                      No additional risk alerts were reported from the available facts.
+                    </p>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="ai-brief">
+                <div className="ai-block">
+                  <h3 className="ai-block__title">
+                    <LineChart size={14} /> Loaded indices
+                  </h3>
+                  {indices.length ? (
+                    <ul className="ai-list">
+                      {indices.map((index) => {
+                        const meta = INDEX_META[index.symbol] ?? { name: index.symbol }
+                        return (
+                          <li key={`detail-index-${index.symbol}`}>
+                            <strong>{meta.name}</strong> ({index.symbol}): ₹{formatPrice(index.price)} ·{' '}
+                            {signedPercent(index.change_pct)} · {dataStatusLabel(index.data_status)} ·{' '}
+                            {formatIst(index.timestamp)} IST
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  ) : (
+                    <p className="ai-muted">Index quotes are not loaded yet.</p>
+                  )}
+                </div>
+
+                <div className="ai-block">
+                  <h3 className="ai-block__title">
+                    <PieChart size={14} /> Sector performance metrics
+                  </h3>
+                  {briefing?.sector_analysis?.strong?.length ||
+                  briefing?.sector_analysis?.weak?.length ? (
+                    <>
+                      <div className="ai-sector-group">
+                        <span className="ai-sector-group__label">Strong</span>
+                        <div className="ai-sector-chips">
+                          {(briefing.sector_analysis.strong ?? []).map((item) => (
+                            <SectorChip key={`detail-strong-${item.sector}`} item={item} />
+                          ))}
+                          {!briefing.sector_analysis.strong?.length && <em>None reported</em>}
+                        </div>
+                      </div>
+                      <div className="ai-sector-group">
+                        <span className="ai-sector-group__label">Weak</span>
+                        <div className="ai-sector-chips">
+                          {(briefing.sector_analysis.weak ?? []).map((item) => (
+                            <SectorChip key={`detail-weak-${item.sector}`} item={item} />
+                          ))}
+                          {!briefing.sector_analysis.weak?.length && <em>None reported</em>}
+                        </div>
+                      </div>
+                      {briefing.sector_analysis.unusual?.length > 0 && (
+                        <ul className="ai-mini-list">
+                          {briefing.sector_analysis.unusual.map((item, index) => (
+                            <li key={`detail-unusual-${index}`}>{item}</li>
+                          ))}
+                        </ul>
+                      )}
+                    </>
+                  ) : (
+                    <p className="ai-muted">Sector data is unavailable for this briefing.</p>
+                  )}
+                </div>
+
+                <div className="ai-block">
+                  <h3 className="ai-block__title">
+                    <Activity size={14} /> India VIX &amp; volatility
+                  </h3>
+                  <p>{volatilityText}</p>
+                  {briefing?.volatility_level && (
+                    <div className="ai-vol-metric">
+                      <span className="ai-vol-metric__label">INDIA VIX:</span>
+                      {vixMatch && (
+                        <span className="ai-vol-metric__value">
+                          {vixMatch[1]} ({vixMatch[2]}%)
+                        </span>
+                      )}
+                      {vixMatch && <span className="ai-vol-metric__dot" aria-hidden="true">·</span>}
+                      <span
+                        className={`ai-vol-metric__regime is-${String(briefing.volatility_level).toLowerCase()}`}
+                      >
+                        {briefing.volatility_level}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="ai-block">
+                  <h3 className="ai-block__title">
+                    <Target size={14} /> Market direction
+                  </h3>
+                  <p>
+                    {briefing?.market_direction ?? legacyText ?? 'No market direction was returned.'}
+                  </p>
+                </div>
+
+                <div className="ai-block">
+                  <h3 className="ai-block__title">
+                    <CheckCircle2 size={14} /> Important observations
+                  </h3>
+                  {briefing?.observations?.length ? (
+                    <ol className="ai-list">
+                      {briefing.observations.map((item, index) => (
+                        <li key={`detail-observation-${index}`}>{item}</li>
+                      ))}
+                    </ol>
+                  ) : (
+                    <p className="ai-muted">No observations were returned.</p>
+                  )}
+                </div>
+
+                <div className="ai-block ai-block--risk">
+                  <h3 className="ai-block__title">
+                    <ShieldAlert size={14} /> Risk alerts
+                  </h3>
+                  {briefing?.risk_alerts?.length ? (
+                    <ul className="ai-list ai-list--risk">
+                      {briefing.risk_alerts.map((item, index) => (
+                        <li key={`detail-risk-${index}`}>{item}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="ai-muted">
+                      No additional risk alerts were reported from the available facts.
+                    </p>
+                  )}
+                </div>
+
+                <div className="ai-brief__footer">
+                  <span>Sources: {(data.data_sources ?? []).join(' · ') || 'Unavailable'}</span>
+                  <span>Facts as of {formatIstIso(data.timestamp_ist ?? data.timestamp)} IST</span>
+                  {lastUpdated && <span>Last updated {formatIstIso(lastUpdated)} IST</span>}
+                </div>
+              </div>
+            )}
+          </aside>
         </div>
       )}
     </section>
@@ -1018,7 +1306,7 @@ export default function DashboardPage() {
 
         <MarketPulse />
 
-        <AIMarketBriefing />
+        <AIMarketBriefing indices={overview?.indices ?? []} />
 
         <LatestNewsPreview />
       </div>

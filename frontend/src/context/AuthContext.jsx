@@ -1,88 +1,82 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react'
 import { clearActiveUserData, setActiveUserId } from '../lib/storage.js'
 
-/** Single local user (auth removed). */
-const LOCAL_SCOPE_ID = 'local'
-const STORAGE_KEY = 'isLoggedIn'
-const NAME_KEY = 'aiq.userName'
-
-/** The one fixed credential that logs in. Shown as a hint on the login page. */
-export const FIXED_EMAIL = 'admin@local'
-export const FIXED_PASSWORD = 'admin'
-const FIXED_NAME = 'Admin'
-
 const AuthContext = createContext(null)
 
-/**
- * Dummy auth: no providers, no tokens. login() accepts only the fixed
- * credential pair; persistence is a localStorage flag.
- */
-export function AuthProvider({ children }) {
-  const [authed, setAuthed] = useState(() => {
-    try {
-      return localStorage.getItem(STORAGE_KEY) === 'true'
-    } catch {
-      return false
-    }
-  })
+const SESSION_KEY = 'aiq.auth.session'
 
-  const [userName, setUserName] = useState(() => {
-    try {
-      return localStorage.getItem(NAME_KEY) || ''
-    } catch {
-      return ''
-    }
-  })
+const AUTHORIZED_ACCOUNTS = [
+  { email: 'nakodayush@gmail.com', password: '123456' },
+  { email: 'shraddhabanagar@gmail.com', password: '7891011' },
+  { email: 'samruddhi1835@gmail.com', password: '12131415' },
+  { email: 'smitshripotdar@gmail.com', password: '16171819' },
+]
+
+function makeUser(email) {
+  return { id: email, email }
+}
+
+function readStoredSession() {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    const email = typeof parsed?.email === 'string' ? parsed.email.trim().toLowerCase() : ''
+    const account = AUTHORIZED_ACCOUNTS.find((item) => item.email === email)
+    return account ? makeUser(account.email) : null
+  } catch {
+    return null
+  }
+}
+
+function writeStoredSession(user) {
+  try {
+    localStorage.setItem(SESSION_KEY, JSON.stringify(user))
+  } catch {}
+}
+
+function clearStoredSession() {
+  try {
+    localStorage.removeItem(SESSION_KEY)
+  } catch {}
+}
+
+export function AuthProvider({ children }) {
+  const [user, setUser] = useState(readStoredSession)
+  const authReady = true
 
   useEffect(() => {
-    setActiveUserId(authed ? LOCAL_SCOPE_ID : null)
-  }, [authed])
+    setActiveUserId(user?.id ?? null)
+  }, [user])
 
   const login = useCallback(async (email, password) => {
-    const emailOk =
-      typeof email === 'string' && email.trim().toLowerCase() === FIXED_EMAIL
-    const passOk = password === FIXED_PASSWORD
-    if (!emailOk || !passOk) {
-      return { ok: false, message: `Use ${FIXED_EMAIL} / ${FIXED_PASSWORD}.` }
-    }
-    try {
-      localStorage.setItem(STORAGE_KEY, 'true')
-      localStorage.setItem(NAME_KEY, FIXED_NAME)
-    } catch {
-      // Storage unavailable — session simply won't persist.
-    }
-    setUserName(FIXED_NAME)
-    setAuthed(true)
+    const cleanEmail = typeof email === 'string' ? email.trim().toLowerCase() : ''
+    const account = AUTHORIZED_ACCOUNTS.find(
+      (item) => item.email === cleanEmail && item.password === password,
+    )
+    if (!account) return { ok: false, message: 'Invalid email or password' }
+
+    const nextUser = makeUser(account.email)
+    writeStoredSession(nextUser)
+    setUser(nextUser)
     return { ok: true }
   }, [])
 
+  const signup = useCallback(async () => ({ ok: false, message: 'Sign-up is not available.' }), [])
+
   const logout = useCallback(async () => {
-    // Wipe the local browser cache first so the next login starts clean.
     clearActiveUserData()
-    try {
-      localStorage.removeItem(STORAGE_KEY)
-      localStorage.removeItem(NAME_KEY)
-    } catch {
-      // Nothing to clean up.
-    }
-    setUserName('')
-    setAuthed(false)
+    clearStoredSession()
+    setUser(null)
   }, [])
 
-  // Stubs kept so old imports don't break; auth UI no longer calls them.
-  const signup = useCallback(async () => ({ ok: false, message: 'Sign-up is disabled.' }), [])
-  const verifySignupOtp = useCallback(async () => ({ ok: false }), [])
-  const resendSignupOtp = useCallback(async () => ({ ok: false }), [])
-
   const value = {
-    isAuthenticated: authed,
-    userName,
-    user: authed ? { email: FIXED_EMAIL, name: FIXED_NAME } : null,
-    authReady: true,
+    isAuthenticated: user !== null,
+    userName: user?.email || '',
+    user,
+    authReady,
     login,
     signup,
-    verifySignupOtp,
-    resendSignupOtp,
     logout,
   }
 
