@@ -7,9 +7,11 @@ import {
   BarChart2,
   Brain,
   CheckCircle2,
+  ChevronDown,
   ChevronRight,
   Clock,
   ExternalLink,
+  Info,
   LineChart,
   Loader2,
   Newspaper,
@@ -689,6 +691,27 @@ function ObservationRow({ item }) {
   )
 }
 
+function AIBriefCard({ icon, title, count, tone = '', preview, children }) {
+  return (
+    <details className={`ai-block ai-card ${tone ? `ai-card--${tone}` : ''}`}>
+      <summary className="ai-card__header">
+        <span className="ai-block__title">
+          {icon}
+          <span>{title}</span>
+          {count != null && <span className="ai-card__count">{count}</span>}
+        </span>
+        <span className="ai-card__toggle" aria-hidden="true">
+          <span className="ai-card__toggle-label ai-card__toggle-label--closed">Details</span>
+          <span className="ai-card__toggle-label ai-card__toggle-label--open">Hide</span>
+          <ChevronDown size={13} className="ai-card__chevron" />
+        </span>
+      </summary>
+      {preview && <div className="ai-card__preview">{preview}</div>}
+      <div className="ai-card__body">{children}</div>
+    </details>
+  )
+}
+
 function AIMarketBriefing({ indices = [] }) {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -746,6 +769,18 @@ function AIMarketBriefing({ indices = [] }) {
   const visibleObservations = (briefing?.observations ?? []).filter(
     (item) => !isRedundantObservation(item),
   )
+  const directionText = condenseMarketDirection(
+    briefing?.market_direction ?? legacyText ?? 'No market direction was returned.',
+  )
+  const hasSectorData = Boolean(
+    briefing?.sector_analysis?.strong?.length || briefing?.sector_analysis?.weak?.length,
+  )
+  const observationCount = visibleObservations.length
+  const riskCount = briefing?.risk_alerts?.length ?? 0
+  const volatilityTone = String(briefing?.volatility_level ?? 'unavailable').toLowerCase()
+  const sourceText = (data?.data_sources ?? []).join(' · ') || 'Unavailable'
+  const marketStatus = String(data?.market_status?.status ?? 'UNAVAILABLE').toUpperCase()
+  const updatedAt = formatIstIso(lastUpdated ?? data?.timestamp_ist ?? data?.timestamp)
 
   return (
     <section className="panel dashboard-section ai-briefing-panel" aria-labelledby="ai-briefing">
@@ -812,20 +847,14 @@ function AIMarketBriefing({ indices = [] }) {
             <h3 className="ai-block__title">
               <Target size={14} /> Market direction
             </h3>
-            <p>
-              {condenseMarketDirection(
-                briefing?.market_direction ?? legacyText ?? 'No market direction was returned.',
-              )}
-            </p>
+            <p title={directionText}>{directionText}</p>
           </div>
 
           <div className="ai-brief__grid">
-            <div className="ai-block">
-              <h3 className="ai-block__title">
-                <PieChart size={14} /> Sector analysis
-              </h3>
-              {briefing?.sector_analysis?.strong?.length ||
-              briefing?.sector_analysis?.weak?.length ? (
+            <AIBriefCard
+              icon={<PieChart size={14} />}
+              title="Sector analysis"
+              preview={hasSectorData ? (
                 <>
                   <div className="ai-sector-group">
                     <span className="ai-sector-group__label">Strong</span>
@@ -845,53 +874,55 @@ function AIMarketBriefing({ indices = [] }) {
                       {!briefing.sector_analysis.weak?.length && <em>None reported</em>}
                     </div>
                   </div>
-                  {visibleUnusualSectors.length > 0 && (
-                    <ul className="ai-mini-list">
-                      {visibleUnusualSectors.map((item, index) => (
-                        <li key={`unusual-${index}`}>{item}</li>
-                      ))}
-                    </ul>
-                  )}
                 </>
               ) : (
                 <p className="ai-muted">Sector data is unavailable for this briefing.</p>
               )}
-            </div>
-
-            <div className="ai-block">
-              <h3 className="ai-block__title">
-                <Activity size={14} /> Volatility analysis
-              </h3>
-              {briefing?.volatility_level ? (
-                <p className="ai-muted">Volatility snapshot</p>
+            >
+              {visibleUnusualSectors.length > 0 ? (
+                <>
+                  <p className="ai-card__body-title">Additional sector commentary</p>
+                  <ul className="ai-mini-list">
+                    {visibleUnusualSectors.map((item, index) => (
+                      <li key={`unusual-${index}`}>{item}</li>
+                    ))}
+                  </ul>
+                </>
               ) : (
-                <p>{volatilityText}</p>
+                <p className="ai-muted">No additional sector commentary was returned.</p>
               )}
-              {briefing?.volatility_level && (
-                <div className="ai-vol-metric">
-                  <span className="ai-vol-metric__label">INDIA VIX:</span>
-                  {vixMatch && (
-                    <span className="ai-vol-metric__value">
-                      {vixMatch[1]} ({vixMatch[2]}%)
-                    </span>
-                  )}
-                  {vixMatch && <span className="ai-vol-metric__dot" aria-hidden="true">·</span>}
-                  <span
-                    className={`ai-vol-metric__regime is-${String(briefing.volatility_level).toLowerCase()}`}
-                  >
-                    {briefing.volatility_level}
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
+            </AIBriefCard>
 
-          <div className="ai-brief__grid ai-brief__grid--lists">
-            <div className="ai-block">
-              <h3 className="ai-block__title">
-                <CheckCircle2 size={14} /> Important observations
-              </h3>
-              {visibleObservations.length ? (
+            <AIBriefCard
+              icon={<Activity size={14} />}
+              title="Volatility analysis"
+              preview={
+                <span className={`ai-vol-pill is-${volatilityTone}`}>
+                  INDIA VIX: {briefing?.volatility_level ?? 'Unavailable'}
+                </span>
+              }
+            >
+              <p>{volatilityText}</p>
+              {vixMatch && (
+                <p className="ai-muted ai-card__note">
+                  Latest reading: {vixMatch[1]} ({vixMatch[2]}%)
+                </p>
+              )}
+            </AIBriefCard>
+
+            <AIBriefCard
+              icon={<CheckCircle2 size={14} />}
+              title="Important observations"
+              count={observationCount}
+              preview={
+                <span className="ai-card__preview-text">
+                  {observationCount
+                    ? `Click to view ${observationCount} market observation${observationCount === 1 ? '' : 's'}`
+                    : 'No additional observations were returned.'}
+                </span>
+              }
+            >
+              {observationCount ? (
                 <ul className="ai-kv-list">
                   {visibleObservations.map((item, index) => (
                     <ObservationRow key={`observation-${index}`} item={item} />
@@ -900,13 +931,22 @@ function AIMarketBriefing({ indices = [] }) {
               ) : (
                 <p className="ai-muted">No additional observations were returned.</p>
               )}
-            </div>
+            </AIBriefCard>
 
-            <div className="ai-block ai-block--risk">
-              <h3 className="ai-block__title">
-                <ShieldAlert size={14} /> Risk alerts
-              </h3>
-              {briefing?.risk_alerts?.length ? (
+            <AIBriefCard
+              icon={<ShieldAlert size={14} />}
+              title="Risk alerts"
+              count={riskCount}
+              tone="risk"
+              preview={
+                <span className="ai-card__preview-text">
+                  {riskCount
+                    ? `Click to view ${riskCount} risk alert${riskCount === 1 ? '' : 's'}`
+                    : 'No additional risk alerts were reported.'}
+                </span>
+              }
+            >
+              {riskCount ? (
                 <ul className="ai-list ai-list--risk">
                   {briefing.risk_alerts.map((item, index) => (
                     <li key={`risk-${index}`}>{item}</li>
@@ -917,30 +957,22 @@ function AIMarketBriefing({ indices = [] }) {
                   No additional risk alerts were reported from the available facts.
                 </p>
               )}
-            </div>
+            </AIBriefCard>
           </div>
 
-          {data.note && (
-            <Note tone="info" title="About this briefing">
-              <span>{data.note}</span>
-            </Note>
-          )}
-
           <div className="ai-brief__footer">
-            <span>
-              Sources: {(data.data_sources ?? []).join(' · ') || 'Unavailable'}
-            </span>
-            <span>
-              Facts as of {formatIstIso(data.timestamp_ist ?? data.timestamp)} IST
-            </span>
-            {lastUpdated && (
-              <span>
-                <Clock size={12} /> Last updated {formatIstIso(lastUpdated)} IST
+            <span className="ai-sources-tip" tabIndex={0} aria-label="Briefing sources and notes">
+              <Info size={12} /> Sources
+              <span className="ai-sources-tip__bubble" role="tooltip">
+                <strong>Sources</strong>
+                <span>{sourceText}</span>
+                {data.note && <span>{data.note}</span>}
+                {data.disclaimer && <span>{data.disclaimer}</span>}
               </span>
-            )}
-            {loading && <span className="ai-muted">Refreshing…</span>}
-            {data.market_status?.status && <span>Market: {data.market_status.status}</span>}
-            {data.disclaimer && <span className="ai-brief__disclaimer">{data.disclaimer}</span>}
+            </span>
+            <span className="ai-brief__footer-meta">
+              Updated {updatedAt} IST · Market: {marketStatus}
+            </span>
           </div>
         </div>
       )}
